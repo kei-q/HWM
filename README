@@ -1,0 +1,26 @@
+HWM: Windowsで動くWindow Managerを作るために必要な機能を調査したもの
+
+とても便利なdwm-win32を常用しているものの、いろいろ問題があるので自作したいと思った。
+
+dwm-win32
+http://www.brain-dump.org/projects/dwm-win32/
+
+dwm-win32の素晴らしいところ
+* dwmがかなり良い感じにWindows上で再現されている
+
+dwm-win32のちょっと悲しいところ
+* Windows上で動作することによる種々の問題
+* たまに強制終了する。
+* 強制終了したとき、他の仮想desktopにあるwindowが見えないままになる
+* 仮想desktopで、master windowの幅が共通
+* dwm baseなのでC言語で記述されている
+
+方針
+* HaskellまたはRubyで富豪的に書きたい
+** Haskellならreactive使ってみたい
+* 設定が気軽に変更できる仕組みが欲しい
+* 無理せず開発を続ける
+
+着地点
+* 日常的に使う機能を実装
+** TODO: 普段なにげなく使用している機能をlist化して実装の優先順位を付ける
