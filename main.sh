@@ -1,1 +1,1 @@
-ghcii.sh Main.hs Windows.hs enumWindows.o
+ghcii.sh Main.hs Windows.hs Stack.sh enumWindows.o

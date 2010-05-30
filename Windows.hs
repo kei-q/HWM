@@ -99,3 +99,4 @@ enumWindows = do
     title <- getWindowText hwnd
     return $ title /= "" && title /= "Program Manager") hwnds
 
+

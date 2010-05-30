@@ -12,10 +12,11 @@ import FRP.Reactive.LegacyAdapters
 import Control.Concurrent (forkIO)
 import Control.Applicative ((<$>))
 import Control.Monad (mplus)
-import Data.List (delete)
 import Foreign.Ptr (plusPtr, nullPtr)
 import Data.Bits ((.&.))
+
 import Windows
+import Stack
 
 mOD_ALT = 1
 mOD_CONTROL = 2
@@ -40,7 +41,7 @@ main = do
     hwnds <- enumWindows
     mapM printHWNDInfo hwnds
 
-    forkIO $ adaptE $ action <$> (scanlE aux (W [] hwnds) $ (fmap convShell shellEvent) `mplus` (fmap convKey keyEvent))
+    forkIO $ adaptE $ action <$> (scanlE aux (listToStack hwnds) $ (fmap convShell shellEvent) `mplus` (fmap convKey keyEvent))
     allocaMessage pump
 
 registerHotKeys :: HWND -> IO ()
@@ -60,32 +61,8 @@ convKey 0x20 = rotateR
 
 aux w f = f w
 
-rotateL (W l []) = W [] (reverse l)
-rotateL (W l r)  = W (head r : l) (tail r)
-rotateR (W [] r) = W (reverse r) []
-rotateR (W l r)  = W (tail l) (head l : r)
+action hwnds = print hwnds >> setForegroundWindow (getActive hwnds) >> return ()
 
-focus :: Windows -> HWND -> Windows
-focus (W l r) hwnd
-  | elem hwnd l = W (delete hwnd l) (hwnd : r)
-  | elem hwnd r = W l (hwnd : delete hwnd r)
-  | otherwise = W l r
-
-addW :: Windows -> HWND -> Windows
-addW (W l r) hwnd = W [] (hwnd : (reverse l) ++ r)
-
-removeW :: Windows -> HWND -> Windows
-removeW (W l r) hwnd
-  | elem hwnd l = W (delete hwnd l) r
-  | elem hwnd r = W l (delete hwnd r)
-  | otherwise = W l r
-
-action hwnds@(W _ (r:_)) = print hwnds >> setForegroundWindow r >> return ()
-action hwnds = print hwnds
-
-data Windows = W [HWND] [HWND] deriving Show
-
--- wndProc :: WindowMessage -> HWND -> WindowMessage -> WPARAM -> LPARAM -> IO LRESULT
 wndProc shellhookid shellSink keySink hwnd msg wp lp
   | msg == wM_HOTKEY   = keyProc
   | msg == shellhookid = shellProc -- registerWindowMessageで登録した値を比較し、shellhook関係か確認 
