@@ -84,11 +84,14 @@ action wm = print wm >> setForegroundWindow (S.getActive $ S.getStack wm) >> ret
 
 ------------------------------------------------------------
 -- util
+whenMmain :: Monad m => a -> m Bool -> m a -> m a
+whenMmain ret test act = test >>= \t -> if t then act else return ret
+
 whenM :: Monad m => m Bool -> m () -> m ()
-whenM test act = test >>= \t -> if t then act else return ()
+whenM = whenMmain ()
 
 whenM0 :: Monad m => m Bool -> m LRESULT -> m LRESULT
-whenM0 test act = test >>= \t -> if t then act else return 0
+whenM0 = whenMmain 0
 
 nilAct act = act >> return 0
 
