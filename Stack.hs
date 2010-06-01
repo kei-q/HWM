@@ -1,7 +1,8 @@
 module Stack
-    ( WindowManager(WM)
-    , wmStack
+    ( WindowManager()
     , newWM
+    , updateStack
+    , getStack
     , rotateL
     , rotateR
     , focus
@@ -28,6 +29,10 @@ listToStack list = W [] list
 
 ------------------------------------------------------------
 -- operation
+
+updateStack f wm = WM { wmStack = f (wmStack wm) }
+
+getStack = wmStack
 
 rotateL (W l []) = W [] (reverse l)
 rotateL (W l r)  = W (head r : l) (tail r)

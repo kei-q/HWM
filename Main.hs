@@ -17,7 +17,7 @@ import Data.Bits ((.&.))
 import Data.Char (ord)
 
 import Windows
-import Stack
+import qualified Stack as S
 
 mOD_ALT = 1
 mOD_CONTROL = 2
@@ -43,8 +43,8 @@ main = do
   registerHotKeys mainhwnd
 
   whenM (registerShellHookWindow mainhwnd) $ do
-    hwnds <- enumWindows
-    forkIO $ adaptE $ action <$> mainEvent hwnds shellEvent keyEvent
+    let act e = e shellEvent keyEvent
+    runMainThread act
     allocaMessage pump
 
 registerHotKeys :: HWND -> IO ()
@@ -59,29 +59,36 @@ wndProc shellhookid shellSink keySink hwnd msg wp lp
     keyProc = nilAct $ keySink wp
     -- lp -> message
     -- wp -> HWND
-    shellProc = let hwnd = castUINTToPtr $ toEnum $ fromEnum lp
-                in do b <- (isWindowVisible hwnd)
-		      if b
-		        then nilAct $ shellSink (wp .&. 0x7fff, hwnd)
-		        else return 0
+    shellProc = whenM0 (isWindowVisible $ convLPARAM2HWND lp) $ do
+                  nilAct $ shellSink (wp .&. 0x7fff, hwnd)
+      where convLPARAM2HWND = castUINTToPtr . toEnum . fromEnum 
 
-mainEvent hwnds shellEvent keyEvent = (scanlE aux (newWM hwnds) $ (fmap convShell shellEvent) `mplus` (fmap convKey keyEvent))
+runMainThread act = do
+  hwnds <- enumWindows
+  forkIO $ adaptE $ action <$> act (mainEvent hwnds)
+  where
+    mainEvent hwnds shellEvent keyEvent
+      = (scanlE aux (S.newWM hwnds) $ (fmap convShell shellEvent)
+                                      `mplus` (fmap convKey keyEvent))
 
-convShell (4,hwnd) = flip focus  $ hwnd
-convShell (2,hwnd) = flip add    $ hwnd
-convShell (1,hwnd) = flip remove $ hwnd
+convShell (4,hwnd) = flip S.focus  $ hwnd
+convShell (2,hwnd) = flip S.add    $ hwnd
+convShell (1,hwnd) = flip S.remove $ hwnd
 convShell _ = id
-convKey 0x10 = rotateL
-convKey 0x20 = rotateR
+convKey 0x10 = S.rotateL
+convKey 0x20 = S.rotateR
 
-aux w f = WM { wmStack = f (wmStack w) }
+aux = flip S.updateStack
 
-action wm = print wm >> setForegroundWindow (getActive $ wmStack wm) >> return ()
+action wm = print wm >> setForegroundWindow (S.getActive $ S.getStack wm) >> return ()
 
 ------------------------------------------------------------
 -- util
 whenM :: Monad m => m Bool -> m () -> m ()
 whenM test act = test >>= \t -> if t then act else return ()
+
+whenM0 :: Monad m => m Bool -> m LRESULT -> m LRESULT
+whenM0 test act = test >>= \t -> if t then act else return 0
 
 nilAct act = act >> return 0
 
