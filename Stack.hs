@@ -1,21 +1,28 @@
 module Stack
-    ( Stack
-    , listToStack
+    ( WindowManager(WM)
+    , wmStack
+    , newWM
     , rotateL
     , rotateR
     , focus
-    , addW
-    , removeW
+    , add
+    , remove
     , getActive
     ) where
 
 import Graphics.Win32.GDI.Types
 import Data.List (delete)
 
+data WindowManager = WM
+    { wmStack :: Stack
+    } deriving Show
+
 data Stack = W [HWND] [HWND] deriving Show
 
 ------------------------------------------------------------
 -- create
+
+newWM list = WM { wmStack = listToStack list }
 
 listToStack list = W [] list
 
@@ -33,11 +40,11 @@ focus (W l r) hwnd
   | elem hwnd r = W l (hwnd : delete hwnd r)
   | otherwise = W l r
 
-addW :: Stack -> HWND -> Stack
-addW (W l r) hwnd = W [] (hwnd : (reverse l) ++ r)
+add :: Stack -> HWND -> Stack
+add (W l r) hwnd = W [] (hwnd : (reverse l) ++ r)
 
-removeW :: Stack -> HWND -> Stack
-removeW (W l r) hwnd
+remove :: Stack -> HWND -> Stack
+remove (W l r) hwnd
   | elem hwnd l = W (delete hwnd l) r
   | elem hwnd r = W l (delete hwnd r)
   | otherwise = W l r
