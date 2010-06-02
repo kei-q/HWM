@@ -54,7 +54,7 @@ main = do
     runMainThread $ shellE `mplus` keyE
     allocaMessage pump
   where
-    convKkey maps keyID
+    convKey maps keyID
       | Just (_,f) <- find ((==keyID).fst) maps = f
       | otherwise = id
 
@@ -84,9 +84,6 @@ runMainThread e = do
   forkIO $ adaptE $ action <$> scanlE (flip S.updateStack) (S.newWM hwnds) e
   where
     action wm = print wm >> setForegroundWindow (S.getActive $ S.getStack wm) >> return ()
-
-
-
 
 ------------------------------------------------------------
 -- util
