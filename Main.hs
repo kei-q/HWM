@@ -72,11 +72,11 @@ wndProc shellhookid shellSink keySink hwnd msg wp lp
   | otherwise = defWindowProc (Just hwnd) msg wp lp
   where
     -- wp -> keyID
-    keyProc = nilAct $ keySink wp
+    keyProc = keySink wp >> return 0
     -- lp -> message
     -- wp -> HWND
     shellProc = whenM0 (isWindowVisible $ convLPARAM2HWND lp) $ do
-                  nilAct $ shellSink (wp .&. 0x7fff, hwnd)
+                  shellSink (wp .&. 0x7fff, hwnd) >> return 0
       where convLPARAM2HWND = castUINTToPtr . toEnum . fromEnum 
 
 runMainThread e = do
@@ -95,7 +95,5 @@ whenM = whenMmain ()
 
 whenM0 :: Monad m => m Bool -> m LRESULT -> m LRESULT
 whenM0 = whenMmain 0
-
-nilAct act = act >> return 0
 
 curry3 f (a,b,c) = f a b c
