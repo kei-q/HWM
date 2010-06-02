@@ -27,13 +27,25 @@ mOD_SHIFT = 4
 mOD_WIN = 8
 wM_HOTKEY = 0x312
 
+toW = toEnum . fromEnum .ord
 -- (id, mod, key)
-keys = [ (0x10,3,0x41) -- Ctrl + Shift + A
-       , (0x20,3,0x42) -- Ctrl + Shift + B
+keys = [ (0x10,3,toW 'J') 
+       , (0x20,3,toW 'K') 
+       , (0x30,3,0x0D) -- Enter
+--       , (0x40,3,0x20) -- space
+       , (0x50,3,toW 'H') 
+       , (0x60,3,toW 'L') 
+--       , (0x70,3,toW 'C') 
+--       , (0x80,3,toW 'F') 
+--       , (0x90,3,toW '1') 
+--       , (0xa0,3,toW '2') 
        ]
 
-maps = [ (0x10,S.rotateL)
-       , (0x20,S.rotateR)
+maps = [ (0x10,S.updateStack S.rotateL)
+       , (0x20,S.updateStack S.rotateR)
+       , (0x30,S.updateStack S.changeMaster)
+       , (0x50,S.updateMasterSize (subtract 0.05))
+       , (0x60,S.updateMasterSize (+ 0.05))
        ]
 
 main :: IO ()
@@ -58,9 +70,9 @@ main = do
       | Just (_,f) <- find ((==keyID).fst) maps = f
       | otherwise = id
 
-convShell (4,hwnd) = flip S.focus  $ hwnd
-convShell (2,hwnd) = flip S.add    $ hwnd
-convShell (1,hwnd) = flip S.remove $ hwnd
+convShell (4,hwnd) = S.updateStack (S.focus  hwnd)
+convShell (2,hwnd) = S.updateStack (S.add    hwnd)
+convShell (1,hwnd) = S.updateStack (S.remove hwnd)
 convShell _ = id
 
 registerHotKeys :: HWND -> IO ()
@@ -81,7 +93,7 @@ wndProc shellhookid shellSink keySink hwnd msg wp lp
 
 runMainThread e = do
   hwnds <- enumWindows
-  forkIO $ adaptE $ action <$> scanlE (flip S.updateStack) (S.newWM hwnds) e
+  forkIO $ adaptE $ action <$> scanlE (\a b -> b a) (S.newWM hwnds) e
   where
     action wm = print wm >> setForegroundWindow (S.getActive $ S.getStack wm) >> return ()
 
