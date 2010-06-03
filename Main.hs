@@ -29,10 +29,10 @@ wM_HOTKEY = 0x312
 
 toW = toEnum . fromEnum .ord
 -- (id, mod, key)
-keys = [ (0x10,3,toW 'J') 
+gKeys = [ (0x10,3,toW 'J') 
        , (0x20,3,toW 'K') 
        , (0x30,3,0x0D) -- Enter
---       , (0x40,3,0x20) -- space
+       , (0x40,3,0x20) -- space
        , (0x50,3,toW 'H') 
        , (0x60,3,toW 'L') 
 --       , (0x70,3,toW 'C') 
@@ -41,9 +41,10 @@ keys = [ (0x10,3,toW 'J')
 --       , (0xa0,3,toW '2') 
        ]
 
-maps = [ (0x10,S.updateStack S.rotateL)
+gMaps = [ (0x10,S.updateStack S.rotateL)
        , (0x20,S.updateStack S.rotateR)
        , (0x30,S.updateStack S.changeMaster)
+       , (0x40,S.changeLayout S.calcLayoutOnly)
        , (0x50,S.updateMasterSize (subtract 0.05))
        , (0x60,S.updateMasterSize (+ 0.05))
        ]
@@ -58,9 +59,9 @@ main = do
 
   mainhwnd <- simpleInitWindow "HWM" (wndProc shi shellSink keySink)
 
-  registerHotKeys mainhwnd
+  registerHotKeys mainhwnd gKeys 
   let shellE = fmap convShell shellEvent
-  let keyE = fmap (convKey maps) keyEvent
+  let keyE = fmap (convKey gMaps) keyEvent
 
   whenM (registerShellHookWindow mainhwnd) $ do
     runMainThread $ shellE `mplus` keyE
@@ -75,8 +76,8 @@ convShell (2,hwnd) = S.updateStack (S.add    hwnd)
 convShell (1,hwnd) = S.updateStack (S.remove hwnd)
 convShell _ = id
 
-registerHotKeys :: HWND -> IO ()
-registerHotKeys hwnd = forM_ keys (curry3 $ registerHotKey hwnd)
+registerHotKeys :: HWND -> [(INT, UINT, UINT)] -> IO ()
+registerHotKeys hwnd keys = forM_ keys (curry3 $ registerHotKey hwnd)
 
 wndProc shellhookid shellSink keySink hwnd msg wp lp
   | msg == wM_HOTKEY   = keyProc
@@ -95,7 +96,10 @@ runMainThread e = do
   hwnds <- enumWindows
   forkIO $ adaptE $ action <$> scanlE (\a b -> b a) (S.newWM hwnds) e
   where
-    action wm = print wm >> setForegroundWindow (S.getActive $ S.getStack wm) >> return ()
+    -- action wm = print wm >> setForegroundWindow (S.getActive $ S.getStack wm) >> return ()
+    action wm = print wm >> focusMain wm >> move (S.layout wm) >> return ()
+    focusMain wm = setForegroundWindow (S.getActive $ S.getStack wm)
+    move = mapM_ (\(hwnd,(x,y,w,h)) -> moveWindow hwnd x y w h True)
 
 ------------------------------------------------------------
 -- util

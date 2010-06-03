@@ -1,6 +1,10 @@
+{-# LANGUAGE TypeSynonymInstances #-}
 module Stack
     ( WindowManager()
     , calcLayout
+    , calcLayoutOnly
+    , changeLayout
+    , layout
     , newWM
     , updateStack
     , updateMasterSize
@@ -20,25 +24,40 @@ import Data.List (delete)
 data WindowManager = WM
     { wmStack :: Stack
     , masterSize :: Double -- [0..1]
+    , wmLayout :: Layout
     } deriving Show
 
 data Stack = W [HWND] [HWND] deriving Show
+type Layout = WindowManager -> [(HWND,(Int,Int,Int,Int))]
+
+instance Show Layout where
+  show _ = "<Layout>"
 
 -- TODO subtract Shell_TrayWnd area from display area
-drawArea = (0,0,1870,1080)
+drawArea = (0,0,1920,1000)
 
+calcLayout :: Layout
 calcLayout wm
   = let (W l r) = wmStack wm
         (master:subs) = reverse l ++ r
         rate = masterSize wm
         (x,y,w,h) = drawArea
-    in (master, (x,y,w*rate,h))
-       : map (\(n,hwnd) -> (hwnd, (w*rate,(h `div` length subs)*n,w*(1-rate),(h `div` length subs)))) (zip [0..] subs)
+	w' = toEnum w
+        h' = h `div` length subs
+    in (master, (x,y,fromEnum (w'*rate),h))
+       : map (\(n,hwnd) -> (hwnd, (fromEnum (w'*rate),h'*n,fromEnum (w'-w'*rate),h'))) (zip [0..] subs)
 
+calcLayoutOnly :: Layout
+calcLayoutOnly wm
+  = let (W l (r:rs)) = wmStack wm
+    in [(r , drawArea)]
+
+changeLayout layout wm = wm { wmLayout = layout }
+layout wm = (wmLayout wm) wm
 ------------------------------------------------------------
 -- create
 
-newWM list = WM { wmStack = listToStack list, masterSize = 0.5 }
+newWM list = WM { wmStack = listToStack list, masterSize = 0.5, wmLayout = calcLayout }
 
 listToStack list = W [] list
 
@@ -48,7 +67,7 @@ listToStack list = W [] list
 updateStack f wm = wm { wmStack = f (wmStack wm) }
 updateMasterSize f wm = wm { masterSize = f (masterSize wm) }
 
-changeMaster (W ls (w:rs)) = W (ls ++ [w]) rs
+changeMaster (W ls (w:rs)) = W [] (w : reverse ls ++ rs)
 
 getStack = wmStack
 
